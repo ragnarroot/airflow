@@ -18,7 +18,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3 -m pip install --upgrade --no-cache-dir pip wheel && \
     mkdir -p /wheelhouse && \
     python3 -m pip wheel --no-cache-dir \
-      pandas numpy requests aiohttp nest_asyncio msal pyodbc sqlalchemy \
+      pandas \
+      numpy \
+      scipy \
+      matplotlib \
+      requests \
+      aiohttp \
+      nest_asyncio \
+      msal \
+      pyodbc \
+      sqlalchemy \
+      plotly \
       -w /wheelhouse
 
 # -------- Runtime stage: minimal surface, signed repo keys, non-root --------
