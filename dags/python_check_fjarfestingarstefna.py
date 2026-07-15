@@ -4,6 +4,8 @@ from docker.types import Mount
 from datetime import datetime
 import os
 
+from assets import verdbref_ready
+
 default_args = {
     'owner': 'airflow',
 }
@@ -12,7 +14,7 @@ with DAG(
     dag_id='run_check_sl_fjarstefna',
     default_args=default_args,
     start_date=datetime(2023, 1, 1),
-    schedule="30 9 * * *",
+    schedule=[verdbref_ready],
     catchup=False,
     description='Check if fjarfestingarstefna is ok',
 ) as dag:

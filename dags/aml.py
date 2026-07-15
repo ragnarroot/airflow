@@ -4,10 +4,13 @@ from docker.types import Mount
 from datetime import datetime
 import os
 
+from assets import verdbref_ready
+
 default_args = {
     'owner': 'airflow',
 }
 
+# check_aml_countries stays on its own cron schedule — independent of the merge.
 with DAG(
     dag_id='run_aml',
     default_args=default_args,
@@ -16,8 +19,6 @@ with DAG(
     catchup=False,
     description='Performing AML',
 ) as dag:
-
-
 
     check_aml_countries = DockerOperator(
         task_id='check_aml_countries',
@@ -29,7 +30,7 @@ with DAG(
         mounts=[
             Mount(source='/home/sl-ragnar/airflow/python_scripts', target='/app/scripts', type='bind')
         ], mount_tmp_dir=False,
-            tmp_dir="/tmp/airflow", 
+            tmp_dir="/tmp/airflow",
             environment={
             "DB_USER": os.environ.get("DB_USER", "placeholder"),
             "DB_USER_PW": os.environ.get("DB_USER_PW", "placeholder"),
@@ -44,9 +45,22 @@ with DAG(
             "AZURE_CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET", "localhost"),
             "OUTLOOK_EMAIL": os.environ.get("OUTLOOK_EMAIL", "localhost"),
         }
-    ) 
+    )
 
-    
+    check_aml_countries
+
+
+# check_aml_loans runs only after a successful verdbref merge (asset-triggered),
+# so it is split into its own DAG (asset scheduling is per-DAG, not per-task).
+with DAG(
+    dag_id='run_aml_loans',
+    default_args=default_args,
+    start_date=datetime(2026, 4, 1),
+    schedule=[verdbref_ready],
+    catchup=False,
+    description='Performing AML loan checks after verdbref merge',
+) as dag_loans:
+
     check_aml_loans = DockerOperator(
         task_id='check_aml_loans',
         image='python-ubuntu',
@@ -57,7 +71,7 @@ with DAG(
         mounts=[
             Mount(source='/home/sl-ragnar/airflow/python_scripts', target='/app/scripts', type='bind')
         ], mount_tmp_dir=False,
-            tmp_dir="/tmp/airflow", 
+            tmp_dir="/tmp/airflow",
             environment={
             "DB_USER": os.environ.get("DB_USER", "placeholder"),
             "DB_USER_PW": os.environ.get("DB_USER_PW", "placeholder"),
@@ -72,11 +86,6 @@ with DAG(
             "AZURE_CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET", "localhost"),
             "OUTLOOK_EMAIL": os.environ.get("OUTLOOK_EMAIL", "localhost"),
         }
-    ) 
+    )
 
-
-
-
-
-    check_aml_countries
     check_aml_loans

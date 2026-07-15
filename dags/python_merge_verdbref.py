@@ -1,8 +1,10 @@
 from airflow import DAG
 from airflow.providers.docker.operators.docker import DockerOperator
 from docker.types import Mount
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
+
+from assets import verdbref_ready
 
 default_args = {
     'owner': 'airflow',
@@ -23,6 +25,7 @@ with DAG(
         api_version='auto',
         auto_remove="success",
         command='/app/scripts/merge_verdbref.py',
+        execution_timeout=timedelta(minutes=30),
         network_mode='bridge',
         mounts=[
             Mount(source='/home/sl-ragnar/airflow/python_scripts', target='/app/scripts', type='bind')
@@ -46,6 +49,8 @@ with DAG(
         api_version='auto',
         auto_remove="success",
         command='/app/scripts/checks/check_merge_verdbref.py',
+        execution_timeout=timedelta(minutes=15),
+        outlets=[verdbref_ready],
         network_mode='bridge',
         mounts=[
             Mount(source='/home/sl-ragnar/airflow/python_scripts', target='/app/scripts', type='bind')
@@ -150,5 +155,40 @@ with DAG(
     ) 
 
 
+    notify_failure = DockerOperator(
+        task_id='notify_failure',
+        image='python-ubuntu',
+        api_version='auto',
+        auto_remove="success",
+        command='/app/scripts/checks/notify_dag_failure.py',
+        trigger_rule="one_failed",
+        network_mode='bridge',
+        mounts=[
+            Mount(source='/home/sl-ragnar/airflow/python_scripts', target='/app/scripts', type='bind')
+        ], mount_tmp_dir=False,
+            tmp_dir="/tmp/airflow",
+            environment={
+            "AZURE_TENANT_ID": os.environ.get("AZURE_TENANT_ID", "placeholder"),
+            "AZURE_CLIENT_ID": os.environ.get("AZURE_CLIENT_ID", "placeholder"),
+            "AZURE_CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET", "localhost"),
+            "OUTLOOK_EMAIL": os.environ.get("OUTLOOK_EMAIL", "localhost"),
+            "AIRFLOW_DAG_ID": "{{ dag.dag_id }}",
+            "AIRFLOW_RUN_ID": "{{ run_id }}",
+            "AIRFLOW_LOGICAL_DATE": "{{ ts }}",
+        }
+    )
+
     run_python_script >> run_check_script
     run_merge_verdbrhreyf >> run_check_merge_verdbrhreyf >> send_verdbrhreyf
+
+    # Alert if the run does not finish. notify_failure is a direct child of every
+    # task that can fail, so a real "failed" state is always its own parent
+    # (one_failed counts failed parents, not upstream_failed ones). It is skipped
+    # on a fully successful run.
+    [
+        run_python_script,
+        run_check_script,
+        run_merge_verdbrhreyf,
+        run_check_merge_verdbrhreyf,
+        send_verdbrhreyf,
+    ] >> notify_failure
