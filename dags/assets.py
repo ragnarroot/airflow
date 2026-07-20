@@ -11,3 +11,8 @@ from airflow.sdk import Asset
 # Downstream DAGs schedule on this instead of a cron time, so they only run after
 # a successful merge and never run on a day the merge fails or hangs.
 verdbref_ready = Asset("mssql://risk/am/verdbref")
+
+# Produced by run_reload_eignastodur once am.eignastodur_daglegt is rebuilt.
+# The return-quality check schedules on this so it only scans a freshly loaded
+# table, never a half-rebuilt or stale one.
+eignastodur_ready = Asset("mssql://risk/am/eignastodur_daglegt")

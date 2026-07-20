@@ -4,7 +4,7 @@ from docker.types import Mount
 from datetime import datetime
 import os
 
-from assets import verdbref_ready
+from assets import eignastodur_ready
 
 default_args = {
     'owner': 'airflow',
@@ -14,7 +14,9 @@ with DAG(
     dag_id='run_calc_irr',
     default_args=default_args,
     start_date=datetime(2023, 1, 1),
-    schedule=[verdbref_ready],
+    # Runs after am.eignastodur_daglegt has been reloaded (run_reload_eignastodur),
+    # since calc_irr now computes IRR from that table.
+    schedule=[eignastodur_ready],
     catchup=False,
     description='Calculate IRR',
 ) as dag:
