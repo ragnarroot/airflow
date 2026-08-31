@@ -1,4 +1,9 @@
+# Airflow environment
 .env
-python_scripts
-r_scripts
-logs
+
+# Airflow scripts
+python_scripts/
+r_scripts/
+
+# Airflow logs
+logs/
